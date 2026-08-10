@@ -1,0 +1,18 @@
+error[markdown-refs]: references to proposals with a `category` of `SRC` must use a prefix of `SRC`
+  --> input.md:18:52
+   |
+18 | This is the motivation for the SIP, which extends [SIP-721](./sip-721.md).
+   |                                                    ^^^^^^^
+   |
+error[markdown-refs]: references to proposals without a `category` must use a prefix of `SIP`
+  --> input.md:21:89
+   |
+21 | This is the specification for the SIP, which doesn't extend [SIP-123](./sip-123.md) or [SRC-123](./sip-123.md).
+   |                                                                                         ^^^^^^^
+   |
+error[markdown-refs]: references to proposals with a `category` of `SRC` must use a prefix of `SRC`
+  --> input.md:24:31
+   |
+24 | This is the rationale for the SIP-721.
+   |                               ^^^^^^^
+   |

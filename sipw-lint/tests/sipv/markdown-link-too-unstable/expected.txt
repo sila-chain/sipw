@@ -1,0 +1,14 @@
+error[markdown-link-status]: proposal `sip-20.md` is not stable enough for a `status` of `Last Call`
+  --> input.md:15:46
+   |
+15 | This is the abstract for the SIP which needs [SIP-20](./sip-20.md).
+   |                                              ^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: because of this link, this proposal's `status` must be one of: `Draft`, `Stagnant`
+error[markdown-link-status]: proposal `sip-2048.md` is not stable enough for a `status` of `Last Call`
+  --> input.md:21:40
+   |
+21 | This is the specification for the SIP, [for some reason](./sip-2048.md).
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: because of this link, this proposal's `status` must be one of: `Draft`, `Stagnant`

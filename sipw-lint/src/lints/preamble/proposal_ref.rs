@@ -1,0 +1,132 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+use sipw_snippets::Snippet;
+
+use crate::lints::{Context, Error, FetchContext, Lint};
+use crate::{LevelExt, SnippetExt};
+
+use regex::Regex;
+
+use serde::{Deserialize, Serialize};
+
+use std::fmt::{Debug, Display};
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema-version", derive(schemars::JsonSchema))]
+pub struct ProposalRef<S> {
+    pub name: S,
+}
+
+impl<S> ProposalRef<S> {
+    fn regex() -> Regex {
+        // NB: This regex is used to calculate a path, so be careful of directory traversal.
+        Regex::new(r"(?i)\b(?:sip|src)-([0-9]+)\b").unwrap()
+    }
+}
+
+impl<S> Lint for ProposalRef<S>
+where
+    S: Debug + Display + AsRef<str>,
+{
+    fn find_resources(&self, ctx: &FetchContext<'_>) -> Result<(), Error> {
+        let field = match ctx.preamble().by_name(self.name.as_ref()) {
+            None => return Ok(()),
+            Some(s) => s,
+        };
+
+        Self::regex()
+            .captures_iter(field.value())
+            .map(|x| x.get(1).unwrap().as_str())
+            .map(|x| x.parse::<u32>().unwrap())
+            .for_each(|p| ctx.fetch_proposal(p));
+
+        Ok(())
+    }
+
+    fn lint<'a>(&self, slug: &'a str, ctx: &Context<'a, '_>) -> Result<(), Error> {
+        let field = match ctx.preamble().by_name(self.name.as_ref()) {
+            None => return Ok(()),
+            Some(s) => s,
+        };
+
+        let regex = Self::regex();
+        let captures = regex.captures_iter(field.value());
+
+        let name_count = field.name().len();
+
+        for capture in captures {
+            let whole = capture.get(0).unwrap();
+
+            let start_text = &field.value()[..whole.start()];
+            let start = start_text.len() + name_count + 1;
+
+            let end_text = &field.value()[..whole.end()];
+            let end = end_text.len() + name_count + 1;
+
+            let number = capture.get(1).unwrap();
+            let number = number.as_str().parse().unwrap();
+
+            let sip = match ctx.proposal(number) {
+                Ok(sip) => sip,
+                Err(e) => {
+                    let label = format!("unable to read proposal `{}`: {}", whole.as_str(), e);
+                    ctx.report(
+                        ctx.annotation_level().title(&label).id(slug).snippet(
+                            Snippet::source(field.source())
+                                .line_start(field.line_start())
+                                .fold(false)
+                                .origin_opt(ctx.origin())
+                                .annotation(
+                                    ctx.annotation_level()
+                                        .span_utf8(field.source(), start, end - start)
+                                        .label("referenced here"),
+                                ),
+                        ),
+                    )?;
+                    continue;
+                }
+            };
+
+            let category = sip.preamble().by_name("category").map(|f| f.value().trim());
+
+            let prefix = match category {
+                Some("SRC") => "SRC",
+                _ => "SIP",
+            };
+
+            if whole.as_str().starts_with(prefix) {
+                continue;
+            }
+
+            let category_msg = match category {
+                Some(c) => format!("with a `category` of `{}`", c),
+                None => "without a `category`".to_string(),
+            };
+
+            let label = format!(
+                "references to proposals {} must use a prefix of `{}`",
+                category_msg, prefix,
+            );
+
+            ctx.report(
+                ctx.annotation_level().title(&label).id(slug).snippet(
+                    Snippet::source(field.source())
+                        .fold(false)
+                        .origin_opt(ctx.origin())
+                        .line_start(field.line_start())
+                        .annotation(
+                            ctx.annotation_level()
+                                .span_utf8(field.source(), start, end - start)
+                                .label("referenced here"),
+                        ),
+                ),
+            )?;
+        }
+
+        Ok(())
+    }
+}

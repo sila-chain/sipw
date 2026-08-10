@@ -1,0 +1,96 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+use pretty_assertions::assert_eq;
+use sipw_lint::lints::markdown::SectionRequired;
+use sipw_lint::reporters::Text;
+use sipw_lint::Linter;
+
+#[tokio::test]
+async fn one_missing() {
+    let src = r#"---
+header: value1
+---
+
+## Banana
+"#;
+
+    let reports = Linter::<Text<String>>::default()
+        .clear_lints()
+        .deny(
+            "markdown-section-req",
+            SectionRequired(vec!["Banana", "Orange"]),
+        )
+        .check_slice(None, src)
+        .run()
+        .await
+        .unwrap()
+        .into_inner();
+
+    assert_eq!(
+        reports,
+        r#"error[markdown-section-req]: body is missing section(s): `Orange`
+ |
+ |
+ = help: must be at the second level (`## Heading`)
+"#
+    );
+}
+
+#[tokio::test]
+async fn two_missing() {
+    let src = r#"---
+header: value1
+---
+"#;
+
+    let reports = Linter::<Text<String>>::default()
+        .clear_lints()
+        .deny(
+            "markdown-section-req",
+            SectionRequired(vec!["Banana", "Orange"]),
+        )
+        .check_slice(None, src)
+        .run()
+        .await
+        .unwrap()
+        .into_inner();
+
+    assert_eq!(
+        reports,
+        r#"error[markdown-section-req]: body is missing section(s): `Banana`, `Orange`
+ |
+ |
+ = help: must be at the second level (`## Heading`)
+"#
+    );
+}
+
+#[tokio::test]
+async fn none_missing() {
+    let src = r#"---
+header: value1
+---
+
+## Banana
+
+## Orange
+"#;
+
+    let reports = Linter::<Text<String>>::default()
+        .clear_lints()
+        .deny(
+            "markdown-section-req",
+            SectionRequired(vec!["Banana", "Orange"]),
+        )
+        .check_slice(None, src)
+        .run()
+        .await
+        .unwrap()
+        .into_inner();
+
+    assert_eq!(reports, "");
+}

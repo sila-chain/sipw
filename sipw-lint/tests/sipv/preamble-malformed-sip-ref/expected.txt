@@ -1,0 +1,21 @@
+error[preamble-re-description-sip-dash]: proposals must be referenced with the form `SIP-N` (not `SIPN` or `SIP N`)
+ --> input.md:4:13
+  |
+4 | description: Floop SRC55 ánd SIP99
+  |             ^^^^^^^^^^^^^^^^^^^^^^ prohibited pattern was matched
+  |
+  = info: the pattern in question: `(?i)sip[\s]*[0-9]+`
+error[preamble-re-description-src-dash]: proposals must be referenced with the form `SRC-N` (not `SRCN` or `SRC N`)
+ --> input.md:4:13
+  |
+4 | description: Floop SRC55 ánd SIP99
+  |             ^^^^^^^^^^^^^^^^^^^^^^ prohibited pattern was matched
+  |
+  = info: the pattern in question: `(?i)src[\s]*[0-9]+`
+error[preamble-re-title-sip-dash]: proposals must be referenced with the form `SIP-N` (not `SIPN` or `SIP N`)
+ --> input.md:3:7
+  |
+3 | title: A sample extension for SIP 1 and SRC-5
+  |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ prohibited pattern was matched
+  |
+  = info: the pattern in question: `(?i)sip[\s]*[0-9]+`
