@@ -1,0 +1,12 @@
+error[preamble-refs-title]: references to proposals with a `category` of `Networking` must use a prefix of `SIP`
+ --> input.md:3:30
+  |
+3 | title: A sample extension to SRC-9, and SIP-10
+  |                              ^^^^^ referenced here
+  |
+error[preamble-refs-title]: references to proposals with a `category` of `SRC` must use a prefix of `SRC`
+ --> input.md:3:41
+  |
+3 | title: A sample extension to SRC-9, and SIP-10
+  |                                         ^^^^^^ referenced here
+  |

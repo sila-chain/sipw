@@ -1,0 +1,14 @@
+error[markdown-link-first]: the first match of the given pattern must be a link
+  --> input.md:15:49
+   |
+15 | This is the abstract for the SIP, which extends SIP-1234.
+   |                                                 ^^^^^^^^
+   |
+   = info: the pattern in question: `(?i)(?:sip|src)-([0-9]+)`
+error[markdown-link-first]: the first match of the given pattern must be a link
+  --> input.md:17:54
+   |
+17 | This is also the abstract for the SIP, which extends SRC-1236.
+   |                                                      ^^^^^^^^
+   |
+   = info: the pattern in question: `(?i)(?:sip|src)-([0-9]+)`

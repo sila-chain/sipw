@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>markdown-refs</title>
+		<link rel="stylesheet" href="../main.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<article>
+			<h1><code>markdown-refs</code></h1>
+			<p>
+				SRCs are referenced using SRC-X, while other proposals use
+				SIP-X.
+			</p>
+
+			<section>
+				<h2>Examples</h2>
+
+				<pre>error[markdown-refs]: references to proposals with a `category` of `SRC` must use a prefix of `SRC`
+  --> input.md
+   |
+18 | This is the motivation for the SIP, which extends [SIP-721](./sip-721.md).
+   |</pre>
+
+				<pre>error[markdown-refs]: references to proposals without a `category` must use a prefix of `SIP`
+  --> input.md
+   |
+21 | This is the specification for the SIP, which doesn't extend [SIP-123](./sip-123.md) or [SRC-123](./sip-123.md).
+   |</pre>
+
+				<pre>error[markdown-refs]: references to proposals with a `category` of `Core` must use a prefix of `SIP`
+  --> input.md
+   |
+24 | This is the rationale for the SRC-3074.
+   |</pre>
+			</section>
+			<section>
+				<h2>Explanation</h2>
+
+				<p>
+					<code>markdown-refs</code> ensures that any references to
+					proposals in the SRC category use an SRC prefix (SRC-1234),
+					and SIP is used for everything else (SIP-1234).
+				</p>
+			</section>
+		</article>
+	</body>
+</html>

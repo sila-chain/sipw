@@ -1,0 +1,3 @@
+[submodule "sipw-lint/dictionaries"]
+	path = sipw-lint/dictionaries
+	url = https://github.com/wooorm/dictionaries.git

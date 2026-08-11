@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>markdown-re-sip-dash</title>
+		<link rel="stylesheet" href="../main.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<article>
+			<h1><code>markdown-re-sip-dash</code></h1>
+			<p>
+				Other SIPs are referenced using SIP-X, not SIPX or SIP X.
+			</p>
+
+			<section>
+				<h2>Examples</h2>
+
+				<pre>error[markdown-re-sip-dash]: proposals must be referenced with the form `SIP-N` (not `SIPN` or `SIP N`)
+  --> input.md
+   |
+27 | These are the backwards compatibility concerns for the SIP1234.
+   |
+   = info: the pattern in question: `(?i)sip[\s]*[0-9]+`</pre>
+			</section>
+			<section>
+				<h2>Explanation</h2>
+
+				<p>
+					Reports common mistakes when referencing other proposals,
+					like omitting the hyphen (SIP1234), or replacing it with a
+					space (SIP 1234).
+				</p>
+
+				<p>
+					For consistency, all proposals should be referenced in the
+					same way.
+				</p>
+				<p>
+					Interfaces and contract names should be enclosed in
+					backticks to avoid this error: <code>`SIP1234`</code>.
+				</p>
+			</section>
+		</article>
+	</body>
+</html>

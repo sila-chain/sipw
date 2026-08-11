@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>preamble-sip</title>
+		<link rel="stylesheet" href="../main.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<article>
+			<h1><code>preamble-sip</code></h1>
+			<p>
+				The <code>sip</code> header is a non-negative integer.
+			</p>
+
+			<section>
+				<h2>Examples</h2>
+
+				<pre>error[preamble-sip]: preamble header `sip` must be an unsigned integer
+ --> input.md:2:5
+  |
+2 | sip: 1abc
+  |     ^^^^^ not a non-negative integer
+  |</pre>
+			</section>
+			<section>
+				<h2>Explanation</h2>
+
+				<p>
+					<code>preamble-sip</code> makes sure the <code>sip</code>
+					front matter (or preamble) field is a non-negative integer.
+				</p>
+
+				<p>
+					Each proposal is identified with a number. The
+					<code>sip</code> field holds that number.
+				</p>
+
+				<p>
+					Before an SIP Editor assigns a number, it is acceptable to
+					leave this field as <code>sip: &lt;to be assigned&gt;</code>
+					or omit it entirely.
+				</p>
+			</section>
+		</article>
+	</body>
+</html>

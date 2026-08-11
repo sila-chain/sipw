@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>preamble-requires-status</title>
+		<link rel="stylesheet" href="../main.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<article>
+			<h1><code>preamble-requires-status</code></h1>
+			<p>
+				SIPs listed in <code>requires</code> have statuses further along
+				than the current proposal.
+			</p>
+
+			<section>
+				<h2>Examples</h2>
+
+				<pre>error[preamble-requires-status]: preamble header `requires` contains items not stable enough for a `status` of `Final`
+ --&gt; sip-20.md:9:10
+  |
+9 | requires: 3074
+  |          ^^^^^ has a less advanced status
+  |
+  = help: valid `status` values for this proposal are: `Draft`, `Stagnant`</pre>
+
+			</section>
+			<section>
+				<h2>Explanation</h2>
+
+				<p>
+					<code>preamble-requires-status</code> checks the front
+					matter (or preamble) field <code>requires</code> for other
+					proposals that are not as far along in the standardization
+					process.
+				</p>
+
+				<p>
+					Final proposals are, for the most part, immutable. A link
+					from a final proposal to a non-final proposal introduces
+					mutability: the non-final proposal could be completely
+					rewritten, changing the meaning of the final proposal.
+				</p>
+
+				<p>
+					There are two solutions: remove the reference to the other
+					proposal, or help the authors of the other proposal move
+					through the standardization process.
+				</p>
+			</section>
+		</article>
+	</body>
+</html>

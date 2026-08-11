@@ -1,0 +1,33 @@
+error[markdown-no-backticks]: proposal references should not be in backticks
+  --> input.md:18:51
+   |
+18 | This is the motivation for the SIP, which extends `SRC-721`.
+   |                                                   ^^^^^^^^^
+   |
+   = info: the pattern in question: `(?i)(sip|src)-[0-9]+`
+error[markdown-re-sip-dash]: proposals must be referenced with the form `SIP-N` (not `SIPN` or `SIP N`)
+  --> input.md:27:56
+   |
+27 | These are the backwards compatibility concerns for the SIP1234.
+   |                                                        ^^^^^^^
+   |
+   = info: the pattern in question: `(?i)sip[\s]*[0-9]+`
+error[markdown-re-src-dash]: proposals must be referenced with the form `SRC-N` (not `SRCN` or `SRC N`)
+  --> input.md:15:49
+   |
+15 | This is the abstract for the SIP, which extends SRC721.
+   |                                                 ^^^^^^
+   |
+   = info: the pattern in question: `(?i)src[\s]*[0-9]+`
+error[markdown-spell]: the word `SRC721` is misspelled
+  --> input.md:15:49
+   |
+15 | This is the abstract for the SIP, which extends SRC721.
+   |                                                 ^^^^^^ incorrectly spelled
+   |
+error[markdown-spell]: the word `SIP1234` is misspelled
+  --> input.md:27:56
+   |
+27 | These are the backwards compatibility concerns for the SIP1234.
+   |                                                        ^^^^^^^ incorrectly spelled
+   |

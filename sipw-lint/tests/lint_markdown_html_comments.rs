@@ -1,0 +1,122 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+use pretty_assertions::assert_eq;
+use sipw_lint::lints::markdown::HtmlComments;
+use sipw_lint::reporters::Text;
+use sipw_lint::Linter;
+
+#[tokio::test]
+async fn warn() {
+    let src = r#"---
+header: value1
+---
+hello
+
+<!-- multi-line
+comment -->
+
+text after
+"#;
+
+    let reports = Linter::<Text<String>>::default()
+        .clear_lints()
+        .deny(
+            "markdown-html-comments",
+            HtmlComments {
+                name: "header",
+                warn_for: vec!["value1"],
+            },
+        )
+        .check_slice(None, src)
+        .run()
+        .await
+        .unwrap()
+        .into_inner();
+
+    assert_eq!(
+        reports,
+        r#"warning[markdown-html-comments]: HTML comments are only allowed while `header` is one of: `value1`
+  |
+6 | <!-- multi-line
+  | ---------------
+  |
+"#
+    );
+}
+
+#[tokio::test]
+async fn error() {
+    let src = r#"---
+header: value2
+---
+hello
+
+<!-- multi-line
+comment -->
+
+text after
+"#;
+
+    let reports = Linter::<Text<String>>::default()
+        .clear_lints()
+        .deny(
+            "markdown-html-comments",
+            HtmlComments {
+                name: "header",
+                warn_for: vec!["value1"],
+            },
+        )
+        .check_slice(None, src)
+        .run()
+        .await
+        .unwrap()
+        .into_inner();
+
+    assert_eq!(
+        reports,
+        r#"error[markdown-html-comments]: HTML comments are not allowed when `header` is `value2`
+  |
+6 | <!-- multi-line
+  | ^^^^^^^^^^^^^^^
+  |
+"#
+    );
+}
+
+#[tokio::test]
+async fn inline_error() {
+    let src = r#"---
+header: value2
+---
+hello <!-- inline --> text
+"#;
+
+    let reports = Linter::<Text<String>>::default()
+        .clear_lints()
+        .deny(
+            "markdown-html-comments",
+            HtmlComments {
+                name: "header",
+                warn_for: vec!["value1"],
+            },
+        )
+        .check_slice(None, src)
+        .run()
+        .await
+        .unwrap()
+        .into_inner();
+
+    assert_eq!(
+        reports,
+        r#"error[markdown-html-comments]: HTML comments are not allowed when `header` is `value2`
+  |
+4 | hello <!-- inline --> text
+  |       ^^^^^^^^^^^^^^^
+  |
+"#
+    );
+}
