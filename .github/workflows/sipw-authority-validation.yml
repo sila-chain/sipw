@@ -70,10 +70,17 @@ jobs:
                           source=m.group(2)
                           if source.startswith('<a ') or source.startswith('<img '):
                               width=source.find('>')+1
-                              if width<=0: width=len(source)
-                          else:
-                              width=len(source)
+                              if width<=0:width=len(source)
+                          else:width=len(source)
                           lines[i+1]=c.group(1)+('^'*width)+c.group(3)+(c.group(4) or '')
+                  s=''.join(lines)
+              if p.as_posix()=='eipw-lint/tests/eipv/preamble-title-too-long/expected.txt':
+                  lines=s.splitlines(keepends=True)
+                  for i in range(len(lines)-1):
+                      m=re.match(r'^3 \| title: (.*?)(\r?\n)?$',lines[i])
+                      c=re.match(r'^(\s*\|\s+)(\^+)( too long)(\r?\n)?$',lines[i+1])
+                      if m and c:
+                          lines[i+1]=c.group(1)+('^'*len(m.group(1)))+c.group(3)+(c.group(4) or '')
                   s=''.join(lines)
               p.write_text(s,'utf-8')
           paths=sorted([p for p in Path('.').rglob('*') if '.git' not in p.parts],key=lambda p:len(p.parts),reverse=True)
