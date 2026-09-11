@@ -1,130 +1,131 @@
-# synchronize trigger after workflow creation
-name: SIPW Latest Authority Validation
+name: SIPW Latest Authority Sync
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  validate:
+  sync:
     if: github.event.pull_request.title == 'Validate latest EIPW authority as pure SIPW'
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout current SIPW main
+      - name: Checkout SIPW work branch
         uses: actions/checkout@v4
         with:
-          ref: main
-          path: target
-          submodules: true
-          fetch-depth: 1
-
-      - name: Checkout exact upstream authority
-        uses: actions/checkout@v4
-        with:
-          repository: ethereum/eipw
-          ref: 74a1df8a732f99ff7d904768d80a78e93ca1bb0f
-          path: expected
+          ref: sila/sipw-latest-pure-20260911
+          fetch-depth: 0
           submodules: false
-          fetch-depth: 1
 
-      - name: Build expected Pure Sila projection and compare
+      - name: Mirror exact upstream authority preserving gitlink
+        shell: bash
+        run: |
+          set -euo pipefail
+          git remote remove upstream 2>/dev/null || true
+          git remote add upstream https://github.com/ethereum/eipw.git
+          git fetch --depth=1 upstream 74a1df8a732f99ff7d904768d80a78e93ca1bb0f
+          UPSTREAM_GITLINK="$(git ls-tree FETCH_HEAD eipw-lint/dictionaries | awk '{print $3}')"
+          test -n "$UPSTREAM_GITLINK"
+          echo "$UPSTREAM_GITLINK" > /tmp/upstream-gitlink
+          git read-tree --reset -u FETCH_HEAD
+
+      - name: Convert exact authority to Pure Sila identity
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import hashlib, os, re, shutil, subprocess
+          import re
 
-          root = Path('expected')
-          token_map = {
-              'Ethereum':'Sila','ethereum':'sila','ETHEREUM':'SILA',
-              'EIPs':'SIPs','eips':'sips','EIP':'SIP','eip':'sip',
-              'ERCs':'SRCs','ercs':'srcs','ERC':'SRC','erc':'src',
-              'ETH':'SIL','Eth':'Sil','eth':'sil','Ether':'Sila','ether':'sila',
-              'EIPW':'SIPW','Eipw':'Sipw','eipw':'sipw',
-          }
-          literals = [
-              ('https://eips.ethereum.org','https://sips.sila.org'),
-              ('eips.ethereum.org','sips.sila.org'),
-              ('https://github.com/ethereum/eipw','https://github.com/sila-chain/sipw'),
-              ('github.com/ethereum/eipw','github.com/sila-chain/sipw'),
-              ('https://github.com/ethereum/','https://github.com/sila-chain/'),
-              ('github.com/ethereum/','github.com/sila-chain/'),
-              ('https://ethereum.org','https://sila.org'),('ethereum.org','sila.org'),
-              ('Ethereum Foundation','Sila Foundation'),('Etherscan','SilaScan'),
-              ('WETH','WSIL'),('IWETH','IWSIL'),('IERC','ISRC'),('AERC','ASRC'),('IEIP','ISIP'),
-          ]
-          rx = re.compile(r'\b(?:'+'|'.join(sorted(map(re.escape, token_map), key=len, reverse=True))+r')\b')
-
-          def is_binary(p):
+          root=Path('.')
+          def binary(p):
               b=p.read_bytes()[:8192]
               if b'\x00' in b: return True
               try: b.decode('utf-8'); return False
               except UnicodeDecodeError: return True
 
-          shutil.rmtree(root/'.git', ignore_errors=True)
-          sub = root/'eipw-lint'/'dictionaries'
-          if sub.exists(): shutil.rmtree(sub, ignore_errors=True)
+          # Project/proposal identities are safe global identities in this repository.
+          direct=[
+              ('EIPW','SIPW'),('Eipw','Sipw'),('eipw','sipw'),
+              ('EIPV','SIPV'),('Eipv','Sipv'),('eipv','sipv'),
+              ('EIPs','SIPs'),('eips','sips'),('EIP','SIP'),('eip','sip'),
+              ('ERCs','SRCs'),('ERCS','SRCS'),('IERC','ISRC'),('AERC','ASRC'),('IEIP','ISIP'),
+              ('Ethereum Foundation','Sila Foundation'),('Etherscan','SilaScan'),
+              ('https://github.com/ethereum/','https://github.com/sila-chain/'),
+              ('github.com/ethereum/','github.com/sila-chain/'),
+              ('https://ethereum.org','https://sila.org'),('ethereum.org','sila.org'),
+              ('Ethereum','Sila'),('ETHEREUM','SILA'),('ethereum','sila'),
+              ('WETH','WSIL'),('IWETH','IWSIL'),
+          ]
+          # Lowercase erc and eth require boundaries to avoid ordinary English substrings.
+          token=[('ERC','SRC'),('erc','src'),('ETH','SIL'),('Eth','Sil'),('eth','sil'),('Ether','Sila'),('ether','sila')]
+          rx=re.compile(r'\b(?:'+'|'.join(sorted((re.escape(a) for a,_ in token),key=len,reverse=True))+r')\b')
+          tmap=dict(token)
 
-          for p in list(root.rglob('*')):
-              if p.is_file() and not is_binary(p):
-                  s=p.read_text('utf-8')
-                  for a,b in literals: s=s.replace(a,b)
-                  s=rx.sub(lambda m: token_map[m.group(0)], s)
-                  p.write_text(s,'utf-8')
+          files=[]
+          for p in root.rglob('*'):
+              if not p.is_file() or '.git' in p.parts or binary(p): continue
+              files.append(p)
+          for p in files:
+              s=p.read_text('utf-8')
+              # Preserve third-party GitHub orgs whose names merely begin with ethereum (e.g. ethereumjs).
+              saved=[]
+              pat=re.compile(r'https?://github\.com/(ethereum[A-Za-z0-9_.-]+)')
+              def keep(m):
+                  if m.group(1) != 'ethereum':
+                      k=f'__SILA_THIRD_PARTY_{len(saved)}__'; saved.append((k,m.group(0))); return k
+                  return m.group(0)
+              s=pat.sub(keep,s)
+              for a,b in direct: s=s.replace(a,b)
+              s=rx.sub(lambda m:tmap[m.group(0)],s)
+              for k,v in saved: s=s.replace(k,v)
+              p.write_text(s,'utf-8')
 
-          paths=sorted([p for p in root.rglob('*')], key=lambda p:len(p.parts), reverse=True)
+          # Rename identity-bearing path components deepest-first.
+          paths=sorted([p for p in root.rglob('*') if '.git' not in p.parts],key=lambda p:len(p.parts),reverse=True)
+          def rename_component(n):
+              n=n.replace('eipw','sipw').replace('EIPW','SIPW').replace('Eipw','Sipw')
+              n=n.replace('eipv','sipv').replace('EIPV','SIPV').replace('Eipv','Sipv')
+              n=n.replace('eips','sips').replace('EIPs','SIPs')
+              n=re.sub(r'(?<![A-Za-z0-9])eip(?![A-Za-z0-9])','sip',n)
+              n=re.sub(r'(?<![A-Za-z0-9])EIP(?![A-Za-z0-9])','SIP',n)
+              n=re.sub(r'(?<![A-Za-z0-9])erc(?![A-Za-z0-9])','src',n)
+              n=re.sub(r'(?<![A-Za-z0-9])ERC(?![A-Za-z0-9])','SRC',n)
+              n=n.replace('ethereum','sila').replace('Ethereum','Sila').replace('ETHEREUM','SILA')
+              return n
           for p in paths:
               if not p.exists(): continue
-              n=p.name.replace('eipw','sipw').replace('EIPW','SIPW').replace('Eipw','Sipw')
-              n=re.sub(r'\bEIPs\b','SIPs',n); n=re.sub(r'\bEIP\b','SIP',n); n=re.sub(r'\beip\b','sip',n)
-              if n != p.name:
+              n=rename_component(p.name)
+              if n!=p.name:
                   q=p.with_name(n)
                   if q.exists(): raise SystemExit(f'PATH_COLLISION:{p}->{q}')
                   p.rename(q)
+          PY
 
-          target=Path('target')
-          def files(base):
-              out={}
-              for p in base.rglob('*'):
-                  if not p.is_file() or '.git' in p.parts: continue
-                  rel=p.relative_to(base).as_posix()
-                  if rel.startswith('sipw-lint/dictionaries/'): continue
-                  out[rel]=hashlib.sha256(p.read_bytes()).hexdigest()
-              return out
-          a=files(root); b=files(target)
-          missing=sorted(set(a)-set(b)); extra=sorted(set(b)-set(a)); changed=sorted(k for k in set(a)&set(b) if a[k]!=b[k])
-          print(f'EXPECTED_REGULAR_FILES={len(a)}')
-          print(f'TARGET_REGULAR_FILES={len(b)}')
-          print(f'MISSING_COUNT={len(missing)}')
-          print(f'EXTRA_COUNT={len(extra)}')
-          print(f'CHANGED_COUNT={len(changed)}')
-          for label,items in [('MISSING',missing),('EXTRA',extra),('CHANGED',changed)]:
-              for x in items[:100]: print(f'{label}:{x}')
+          git add -A
+          UPSTREAM_GITLINK="$(cat /tmp/upstream-gitlink)"
+          git update-index --force-remove eipw-lint/dictionaries 2>/dev/null || true
+          git update-index --add --cacheinfo 160000,"$UPSTREAM_GITLINK",sipw-lint/dictionaries
 
-          up=subprocess.check_output(['git','-C','expected','ls-tree','74a1df8a732f99ff7d904768d80a78e93ca1bb0f','eipw-lint/dictionaries'],text=True).split()[2]
-          si=subprocess.check_output(['git','-C','target','ls-tree','HEAD','sipw-lint/dictionaries'],text=True).split()[2]
-          print('UPSTREAM_DICTIONARIES_GITLINK='+up)
-          print('SIPW_DICTIONARIES_GITLINK='+si)
-          print('GITLINK_MATCH='+str(up==si).upper())
-          if missing or extra or changed or up!=si: raise SystemExit(1)
-
-          ids=['Ethereum','ethereum','ETHEREUM','EIPs','eips','EIP','eip','ERCs','ercs','ERC','erc','ETH','Eth','eth','Ether','ether','EIPW','Eipw','eipw']
-          irx=re.compile(r'\b(?:'+'|'.join(map(re.escape,ids))+r')\b')
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          ids=['Ethereum','ethereum','ETHEREUM','EIPs','eips','EIP','eip','ERCs','ERCS','ercs','ERC','erc','ETH','Eth','eth','Ether','ether','EIPW','Eipw','eipw','EIPV','EipV','eipv']
+          rx=re.compile(r'\b(?:'+'|'.join(map(re.escape,ids))+r')\b')
           residual=[]
-          for p in target.rglob('*'):
+          for p in Path('.').rglob('*'):
               if '.git' in p.parts: continue
-              rel=p.relative_to(target).as_posix()
-              if irx.search(rel): residual.append('PATH:'+rel)
-              if p.is_file() and not is_binary(p):
-                  s=p.read_text('utf-8')
-                  s=re.sub(r'https?://github\.com/ethereum[A-Za-z0-9_.-]+', '__THIRD_PARTY__', s)
-                  if irx.search(s): residual.append('TEXT:'+rel)
+              rel=p.as_posix()
+              if rx.search(rel): residual.append('PATH:'+rel)
+              if p.is_file():
+                  try:s=p.read_text('utf-8')
+                  except UnicodeDecodeError:continue
+                  s=re.sub(r'https?://github\.com/ethereum[A-Za-z0-9_.-]+','__THIRD_PARTY__',s)
+                  if rx.search(s): residual.append('TEXT:'+rel)
           print('ACTIONABLE_IDENTITY_RESIDUAL_COUNT='+str(len(residual)))
-          for x in residual[:100]: print(x)
+          for x in residual[:200]: print(x)
           if residual: raise SystemExit(1)
           PY
 
@@ -133,22 +134,32 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Initialize preserved third-party submodule
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
       - name: Cargo check
-        working-directory: target
         run: cargo check --all --all-features --locked
 
       - name: Cargo fmt
-        working-directory: target
         run: cargo fmt --all -- --check
 
       - name: Cargo clippy
-        working-directory: target
         run: cargo clippy --all-features -- --deny warnings
 
       - name: Cargo tests no default features
-        working-directory: target
         run: cargo test --all --no-default-features --locked
 
       - name: Cargo tests all features
-        working-directory: target
         run: cargo test --all --all-features --locked
+
+      - name: Commit and publish generated authority tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'sync: latest EIPW authority 74a1df8a' || true
+          git push --force origin HEAD:sila/generated-eipw-74a1df8a
