@@ -36,7 +36,7 @@ hello world"#;
 }
 
 #[tokio::test]
-async fn valid_src() {
+async fn valid_erc() {
     let src = r#"---
 header: Extension of SRC-44
 other: 1234, 44, 55
@@ -168,7 +168,7 @@ hello world"#;
 }
 
 #[tokio::test]
-async fn missing_sip_src() {
+async fn missing_sip_erc() {
     let src = r#"---
 header: Extension of SIP-9999 and SRC-45
 other: 1234, 44, 55

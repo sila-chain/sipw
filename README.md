@@ -73,7 +73,7 @@ error[preamble-order]: preamble header `description` must come after `title`
 | `markdown-no-backticks`             | No proposals are referenced inside backticks (eg. \`SIP-1234\`).                              |
 | `markdown-no-smart-quotes`          | Smart quotes (", ", ', ') are not allowed, use straight quotes (", ') instead.                |
 | `markdown-order-section`            | There are no extra sections and the sections are in the correct order.                        |
-| `markdown-re-sip-dash`              | Other SIPs are referenced using SIP-X, not EIPX or SIP X.                                     |
+| `markdown-re-sip-dash`              | Other SIPs are referenced using SIP-X, not SIPX or SIP X.                                     |
 | `markdown-re-src-dash`              | Other SRCs are referenced using SRC-X, not ERCX or SRC X.                                     |
 | `markdown-refs`                     | SRCs are referenced using SRC-X, while other proposals use SIP-X.                             |
 | `markdown-rel-links`                | All URLs in the page are relative.                                                            |

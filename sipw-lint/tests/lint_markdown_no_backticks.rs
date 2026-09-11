@@ -100,7 +100,7 @@ Here's some code:
 
 ```solidity
 // This is fine because it's in a code block
-function implementEIP1234() {
+function implementSIP1234() {
     // SIP-1234 implementation
 }
 ```

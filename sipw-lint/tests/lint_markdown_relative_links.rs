@@ -15,7 +15,7 @@ async fn inline_link_to_consensus_specs() {
 header: value1
 ---
 
-[hi](https://github.com/sila-chain/consensus-specs/blob/6c2b46ae3248760e0f6e52d61077d8b31e43ad1d/specs/eip4844/validator.md#compute_aggregated_poly_and_commitment)
+[hi](https://github.com/sila-chain/consensus-specs/blob/6c2b46ae3248760e0f6e52d61077d8b31e43ad1d/specs/sip4844/validator.md#compute_aggregated_poly_and_commitment)
 "#;
 
     let reports = Linter::<Text<String>>::default()
