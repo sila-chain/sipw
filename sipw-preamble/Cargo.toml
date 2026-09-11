@@ -1,0 +1,16 @@
+[package]
+name = "sipw-preamble"
+version = "0.5.0-dev"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "preamble parser for sipw, the Sila Improvement Proposal validator"
+
+[dependencies]
+sipw-snippets.workspace = true
+regex.workspace = true
+snafu.workspace = true
+
+[dev-dependencies]
+assert_matches.workspace = true

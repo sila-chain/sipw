@@ -1,0 +1,31 @@
+{
+  "$id": "https://sips.sila.org/assets/sip-1/schema/json/citation.json",
+  "description": "Citation format for SIPs",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "allOf": [
+    {
+        "$ref": "https://resource.citationstyles.org/schema/v1.0/input/json/csl-data.json#/items"
+    },
+    {
+      "required": [
+        "DOI",
+        "URL"
+      ],
+      "properties": {
+        "URL": {
+            "format": "uri"
+        },
+        "custom": {
+          "properties": {
+            "additional-urls": {
+              "type": "array",
+              "items": {
+                "format": "uri"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

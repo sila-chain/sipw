@@ -1,0 +1,58 @@
+[workspace]
+members = [ "sipw-preamble", "sipw-lint", "sipw-lint-js", "sipw-snippets" ]
+
+[workspace.package]
+version = "0.12.0-dev"
+edition = "2021"
+license = "MPL-2.0"
+repository = "https://github.com/sila-chain/sipw"
+rust-version = "1.81"
+
+[workspace.dependencies]
+sipw-snippets = { path = "sipw-snippets", version = "0.4.0-dev" }
+sipw-lint = { path = "sipw-lint", version = "0.12.0-dev" }
+sipw-preamble = { path = "sipw-preamble", version = "0.5.0-dev" }
+tokio = "1.44.1"
+serde_json = "1.0.140"
+toml = "0.8.20"
+serde = "1.0.219"
+getrandom = "0.2.15"
+regex = "1.11.1"
+snafu = "0.8.5"
+assert_matches = "1.5.0"
+pretty_assertions = "1.4.1"
+figment = "0.10.19"
+
+[package]
+name = "sipw"
+description = "Sila Improvement Proposal linter that's one more than sipv"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+schema-version = [ "sipw-lint/schema-version" ]
+
+[dependencies]
+sipw-snippets.workspace = true
+tokio = { workspace = true, features = [ "macros" ] }
+sipw-lint = { workspace = true, features = [ "tokio" ] }
+serde_json.workspace = true
+toml.workspace = true
+serde = { workspace = true, features = [ "derive" ] }
+
+sysexits = "0.8.5"
+clap = { version = "4.5.27", features = [ "derive", "cargo" ] }
+thiserror = "2.0.11"
+figment = { workspace = true, features = ["toml"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+tokio = { workspace = true, features = [ "macros", "rt" ] }
+getrandom = { workspace = true, features = [ "js" ] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { workspace = true, features = [ "fs", "macros", "rt-multi-thread" ] }

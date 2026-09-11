@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>preamble-req</title>
+		<link rel="stylesheet" href="../main.css">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	</head>
+	<body>
+		<article>
+			<h1><code>preamble-req</code></h1>
+			<p>
+				All required preamble headers are present.
+			</p>
+
+			<section>
+				<h2>Examples</h2>
+
+				<pre>error[preamble-req]: preamble is missing header(s): `sip`, `author`, `status`, `type`, `created`
+--&gt; input.md
+ |
+ |</pre>
+
+				<pre>error[preamble-req-withdrawal-reason]: preamble header `withdrawal-reason` is required when `status` is `Withdrawn`
+ --&gt; input.md:3:1
+  |
+3 | status: Withdrawn
+  | ----------------- info: defined here
+  |</pre>
+
+			</section>
+			<section>
+				<h2>Explanation</h2>
+
+				<p>
+					<code>preamble-req</code> makes sure the front matter (or
+					preamble) contains all of the required fields. See
+					<a href="https://sips.sila.org/SIPS/sip-1#sip-header-preamble">SIP-1</a>
+					for a list of required fields and their descriptions.
+				</p>
+			</section>
+		</article>
+	</body>
+</html>

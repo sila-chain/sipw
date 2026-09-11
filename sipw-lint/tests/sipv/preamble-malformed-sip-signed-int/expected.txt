@@ -1,0 +1,6 @@
+error[preamble-sip]: preamble header `sip` must be an unsigned integer
+ --> input.md:2:5
+  |
+2 | sip: -1
+  |     ^^^ not a non-negative integer
+  |

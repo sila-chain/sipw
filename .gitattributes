@@ -1,0 +1,4 @@
+/sipw-lint/tests/sipv/**/*.md text eol=lf
+/sipw-lint/tests/sipv/preamble-malformed-crlf/input.md text eol=crlf
+/sipw-lint/tests/sipv/**/*.txt text eol=lf
+/sipw-lint-js/tests/sips/**/*.md text eol=lf

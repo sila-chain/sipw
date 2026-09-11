@@ -1,0 +1,478 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+#![cfg(target_arch = "wasm32")]
+
+use sipw_lint_js::{format, lint};
+
+use js_sys::Object;
+
+use pretty_assertions::assert_eq;
+
+use serde::Serialize;
+
+use serde_json::json;
+
+use std::path::PathBuf;
+
+use wasm_bindgen::prelude::*;
+
+use wasm_bindgen_test::wasm_bindgen_test;
+
+#[wasm_bindgen_test]
+async fn lint_one() {
+    let mut path = PathBuf::from("tests");
+    path.push("sips");
+    path.push("sip-1000.md");
+
+    let path = path.to_str().unwrap();
+
+    let result = lint(vec![JsValue::from_str(path)], None)
+        .await
+        .ok()
+        .unwrap();
+
+    let actual: serde_json::Value = serde_wasm_bindgen::from_value(result).unwrap();
+    let expected = json! {
+    [
+        {
+            "footer": [
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "valid `status` values for this proposal are: `Draft`, `Stagnant`"
+                },
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "see https://sila.github.io/sipw/preamble-requires-status/"
+                }
+            ],
+            "formatted": "error[preamble-requires-status]: preamble header `requires` contains items not stable enough for a `status` of `Last Call`\n  --> tests/sips/sip-1000.md:12:10\n   |\n12 | requires: 20\n   |          ^^^ has a less advanced status\n   |\n   = help: valid `status` values for this proposal are: `Draft`, `Stagnant`\n   = help: see https://sila.github.io/sipw/preamble-requires-status/",
+            "id": "preamble-requires-status",
+            "level": "Error",
+            "snippets": [
+                {
+                    "annotations": [
+                        {
+                            "label": "has a less advanced status",
+                            "level": "Error",
+                            "range": {
+                                "end": 12,
+                                "start": 9
+                            }
+                        }
+                    ],
+                    "fold": false,
+                    "line_start": 12,
+                    "origin": "tests/sips/sip-1000.md",
+                    "source": "requires: 20"
+                }
+            ],
+            "title": "preamble header `requires` contains items not stable enough for a `status` of `Last Call`"
+        }
+    ]
+    };
+
+    assert_eq!(expected, actual);
+}
+
+#[wasm_bindgen_test]
+async fn lint_json_schema() {
+    let mut path = PathBuf::from("tests");
+    path.push("sips");
+    path.push("sip-2000.md");
+
+    let path = path.to_str().unwrap();
+
+    let result = lint(vec![JsValue::from_str(path)], None)
+        .await
+        .ok()
+        .unwrap();
+
+    let actual: serde_json::Value = serde_wasm_bindgen::from_value(result).unwrap();
+    let expected = json! {
+    [
+        {
+            "footer": [
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "end the file with `## Copyright` followed immediately by `Copyright and related rights waived via [CC0](../LICENSE.md).`, with no other content after it"
+                },
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "see https://sila.github.io/sipw/markdown-copyright/"
+                }
+            ],
+            "formatted": "error[markdown-copyright]: the `Copyright` section must be the last content in the file\n  --> tests/sips/sip-2000.md:38:1\n   |\n38 | ## Copyright\n   | ^^^^^^^^^^^^ nothing may follow this section\n   |\n   = help: end the file with `## Copyright` followed immediately by `Copyright and related rights waived via [CC0](../LICENSE.md).`, with no other content after it\n   = help: see https://sila.github.io/sipw/markdown-copyright/",
+            "id": "markdown-copyright",
+            "level": "Error",
+            "snippets": [
+                {
+                    "annotations": [
+                        {
+                            "label": "nothing may follow this section",
+                            "level": "Error",
+                            "range": {
+                                "end": 12,
+                                "start": 0
+                            }
+                        }
+                    ],
+                    "fold": true,
+                    "line_start": 38,
+                    "origin": "tests/sips/sip-2000.md",
+                    "source": "## Copyright"
+                }
+            ],
+            "title": "the `Copyright` section must be the last content in the file"
+        },
+        {
+            "footer": [
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "see https://github.com/sila-chain/sipw/blob/master/sipw-lint/src/lints/markdown/json_schema/citation.json"
+                },
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "see https://sila.github.io/sipw/markdown-json-cite/"
+                }
+            ],
+            "formatted": r#"error[markdown-json-cite]: code block of type `csl-json` does not conform to required schema
+  --> tests/sips/sip-2000.md:42:1
+   |
+42 | /     ```csl-json
+43 | |     {
+44 | |         "type": "article",
+45 | |         "id": "1",
+46 | |         "URL": "3"
+47 | |     }
+48 | |     ```
+   | |       ^
+   | |_______|
+   |         "3" is not a "uri"
+   |         "DOI" is a required property
+   |
+   = help: see https://github.com/sila-chain/sipw/blob/master/sipw-lint/src/lints/markdown/json_schema/citation.json
+   = help: see https://sila.github.io/sipw/markdown-json-cite/"#,
+            "id": "markdown-json-cite",
+            "level": "Error",
+            "snippets": [
+                {
+                    "annotations": [
+                        {
+                            "label": "\"3\" is not a \"uri\"",
+                            "level": "Error",
+                            "range": {
+                                "end": 100,
+                                "start": 0
+                            }
+                        },
+                        {
+                            "label": "\"DOI\" is a required property",
+                            "level": "Error",
+                            "range": {
+                                "end": 100,
+                                "start": 0
+                            }
+                        }
+                    ],
+                    "fold": false,
+                    "line_start": 42,
+                    "origin": "tests/sips/sip-2000.md",
+                    "source": "    ```csl-json\n    {\n        \"type\": \"article\",\n        \"id\": \"1\",\n        \"URL\": \"3\"\n    }\n    ```"
+                }
+            ],
+            "title": "code block of type `csl-json` does not conform to required schema"
+        }
+    ]
+
+    };
+
+    assert_eq!(expected, actual);
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen_test]
+async fn lint_one_with_options() {
+    let mut path = PathBuf::from("tests");
+    path.push("sips");
+    path.push("sip-1000.md");
+
+    let path = path.to_str().unwrap();
+
+    let opts = json!(
+       {
+           "warn": ["preamble-requires-status"],
+           "allow": [],
+           "deny": []
+       }
+    );
+
+    let opts_js = opts
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .unwrap();
+    let opts = Object::try_from(&opts_js).unwrap().to_owned();
+
+    let result = lint(vec![JsValue::from_str(path)], Some(opts))
+        .await
+        .ok()
+        .unwrap();
+
+    let actual: serde_json::Value = serde_wasm_bindgen::from_value(result).unwrap();
+    let expected = json! {
+    [
+        {
+            "footer": [
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "valid `status` values for this proposal are: `Draft`, `Stagnant`"
+                },
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "see https://sila.github.io/sipw/preamble-requires-status/"
+                }
+            ],
+            "formatted": "warning[preamble-requires-status]: preamble header `requires` contains items not stable enough for a `status` of `Last Call`\n  --> tests/sips/sip-1000.md:12:10\n   |\n12 | requires: 20\n   |          --- has a less advanced status\n   |\n   = help: valid `status` values for this proposal are: `Draft`, `Stagnant`\n   = help: see https://sila.github.io/sipw/preamble-requires-status/",
+            "id": "preamble-requires-status",
+            "level": "Warning",
+            "snippets": [
+                {
+                    "annotations": [
+                        {
+                            "label": "has a less advanced status",
+                            "level": "Warning",
+                            "range": {
+                                "end": 12,
+                                "start": 9
+                            }
+                        }
+                    ],
+                    "fold": false,
+                    "line_start": 12,
+                    "origin": "tests/sips/sip-1000.md",
+                    "source": "requires: 20"
+                }
+            ],
+            "title": "preamble header `requires` contains items not stable enough for a `status` of `Last Call`"
+        }
+    ]
+    };
+
+    assert_eq!(expected, actual);
+}
+
+#[wasm_bindgen_test]
+async fn lint_one_with_default_lints() {
+    let mut path = PathBuf::from("tests");
+    path.push("sips");
+    path.push("sip-1000.md");
+
+    let path = path.to_str().unwrap();
+
+    let opts = json!(
+        {
+            "default_lints": {
+                "banana": {
+                    "kind": "preamble-regex",
+                    "name": "requires",
+                    "mode": "includes",
+                    "pattern": "banana",
+                    "message": "requires must include banana"
+                }
+            }
+       }
+    );
+
+    let opts_js = opts
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .unwrap();
+    let opts = Object::try_from(&opts_js).unwrap().to_owned();
+
+    let result = lint(vec![JsValue::from_str(path)], Some(opts))
+        .await
+        .ok()
+        .unwrap();
+
+    let actual: serde_json::Value = serde_wasm_bindgen::from_value(result).unwrap();
+    let expected = json! {
+    [
+        {
+            "footer": [
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Info",
+                    "snippets": [],
+                    "title": "the pattern in question: `banana`"
+                },
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "see https://sila.github.io/sipw/banana/"
+                }
+            ],
+            "formatted": "error[banana]: requires must include banana\n  --> tests/sips/sip-1000.md:12:10\n   |\n12 | requires: 20\n   |          ^^^ required pattern was not matched\n   |\n   = info: the pattern in question: `banana`\n   = help: see https://sila.github.io/sipw/banana/",
+            "id": "banana",
+            "level": "Error",
+            "snippets": [
+                {
+                    "annotations": [
+                        {
+                            "label": "required pattern was not matched",
+                            "level": "Error",
+                            "range": {
+                                "end": 12,
+                                "start": 9
+                            }
+                        }
+                    ],
+                    "fold": false,
+                    "line_start": 12,
+                    "origin": "tests/sips/sip-1000.md",
+                    "source": "requires: 20"
+                }
+            ],
+            "title": "requires must include banana"
+        }
+    ]
+    };
+
+    assert_eq!(expected, actual);
+}
+
+#[wasm_bindgen_test]
+async fn lint_one_with_default_modifiers() {
+    let mut path = PathBuf::from("tests");
+    path.push("sips");
+    path.push("sip-1000.md");
+
+    let path = path.to_str().unwrap();
+
+    let opts = json!(
+        {
+            "default_modifiers": [
+                {
+                    "kind": "set-default-annotation",
+                    "name": "status",
+                    "value": "Last Call",
+                    "annotation_level": "info",
+                }
+            ]
+       }
+    );
+
+    let opts_js = opts
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .unwrap();
+    let opts = Object::try_from(&opts_js).unwrap().to_owned();
+
+    let result = lint(vec![JsValue::from_str(path)], Some(opts))
+        .await
+        .unwrap();
+
+    let actual: serde_json::Value = serde_wasm_bindgen::from_value(result).unwrap();
+    let expected = json! {
+    [
+        {
+            "footer": [
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "valid `status` values for this proposal are: `Draft`, `Stagnant`"
+                },
+                {
+                    "footer": [],
+                    "id": null,
+                    "level": "Help",
+                    "snippets": [],
+                    "title": "see https://sila.github.io/sipw/preamble-requires-status/"
+                }
+            ],
+            "formatted": "info[preamble-requires-status]: preamble header `requires` contains items not stable enough for a `status` of `Last Call`\n  --> tests/sips/sip-1000.md:12:10\n   |\n12 | requires: 20\n   |          --- info: has a less advanced status\n   |\n   = help: valid `status` values for this proposal are: `Draft`, `Stagnant`\n   = help: see https://sila.github.io/sipw/preamble-requires-status/",
+            "id": "preamble-requires-status",
+            "level": "Info",
+            "snippets": [
+                {
+                    "annotations": [
+                        {
+                            "label": "has a less advanced status",
+                            "level": "Info",
+                            "range": {
+                                "end": 12,
+                                "start": 9
+                            }
+                        }
+                    ],
+                    "fold": false,
+                    "line_start": 12,
+                    "origin": "tests/sips/sip-1000.md",
+                    "source": "requires: 20"
+                }
+            ],
+            "title": "preamble header `requires` contains items not stable enough for a `status` of `Last Call`"
+        }
+    ]
+    };
+
+    assert_eq!(expected, actual);
+}
+
+#[wasm_bindgen_test]
+async fn format_one() {
+    let mut path = PathBuf::from("tests");
+    path.push("sips");
+    path.push("sip-1000.md");
+
+    let path = path.to_str().unwrap();
+
+    let result = lint(vec![JsValue::from_str(path)], None)
+        .await
+        .ok()
+        .unwrap();
+
+    let snippets: Vec<serde_json::Value> = serde_wasm_bindgen::from_value(result).unwrap();
+    let snippet = snippets[0]
+        .serialize(&serde_wasm_bindgen::Serializer::json_compatible())
+        .unwrap();
+    let actual = format(&snippet).ok().unwrap();
+
+    let expected = r#"error[preamble-requires-status]: preamble header `requires` contains items not stable enough for a `status` of `Last Call`
+  --> tests/sips/sip-1000.md:12:10
+   |
+12 | requires: 20
+   |          ^^^ has a less advanced status
+   |
+   = help: valid `status` values for this proposal are: `Draft`, `Stagnant`
+   = help: see https://sila.github.io/sipw/preamble-requires-status/"#;
+
+    assert_eq!(expected, actual);
+}
