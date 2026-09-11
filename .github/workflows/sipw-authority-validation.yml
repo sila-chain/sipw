@@ -71,6 +71,12 @@ jobs:
                       m=re.match(r'^3 \| title: (.*?)(\r?\n)?$',ls[i]); c=re.match(r'^(\s*\|\s+)(\^+)( too long)(\r?\n)?$',ls[i+1])
                       if m and c:ls[i+1]=c.group(1)+'^'*(len(m.group(1))+1)+c.group(3)+(c.group(4) or '')
                   s=''.join(ls)
+              if p.as_posix()=='eipw-lint/tests/eipv/preamble-description-too-long/expected.txt':
+                  ls=s.splitlines(keepends=True)
+                  for i in range(len(ls)-1):
+                      m=re.match(r'^4 \| \.\.\.on: (.*?)(\r?\n)?$',ls[i]); c=re.match(r'^(\s*\|\s+)(\^+)( too long)(\r?\n)?$',ls[i+1])
+                      if m and c:ls[i+1]=c.group(1)+'^'*len(m.group(1))+c.group(3)+(c.group(4) or '')
+                  s=''.join(ls)
               p.write_bytes(s.encode('utf-8'))
           paths=sorted([p for p in Path('.').rglob('*') if '.git' not in p.parts],key=lambda p:len(p.parts),reverse=True)
           def rn(n):
