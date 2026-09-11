@@ -57,9 +57,21 @@ jobs:
                       k=f'__SILA_THIRD_PARTY_{len(saved)}__';saved.append((k,m.group(0)));return k
                   return m.group(0)
               s=pat.sub(keep,s)
+              # Rust regex literals escape the dot in github.com, so map this form explicitly
+              # before the generic Ethereum token conversion.
+              s=s.replace(r'github\\.com/ethereum/consensus-specs',r'github\\.com/sila-chain/consensus-specs')
               for a,b in direct:s=s.replace(a,b)
               s=rx.sub(lambda m:tmap[m.group(0)],s)
               for k,v in saved:s=s.replace(k,v)
+              # Reporter snapshot underlines must follow the transformed source-line width.
+              if p.as_posix()=='eipw-lint/tests/lint_markdown_relative_links.rs':
+                  lines=s.splitlines(keepends=True)
+                  for i in range(len(lines)-1):
+                      m=re.match(r'^(\d+ \| )(.*?)(\r?\n)?$',lines[i])
+                      c=re.match(r'^(\s*\| )(\^+)( used here)(\r?\n)?$',lines[i+1])
+                      if m and c:
+                          lines[i+1]=c.group(1)+('^'*len(m.group(2)))+c.group(3)+(c.group(4) or '')
+                  s=''.join(lines)
               p.write_text(s,'utf-8')
           paths=sorted([p for p in Path('.').rglob('*') if '.git' not in p.parts],key=lambda p:len(p.parts),reverse=True)
           def rn(n):
