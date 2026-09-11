@@ -1,0 +1,159 @@
+name: SIPW Latest Authority Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    if: github.event.pull_request.title == 'Validate latest EIPW authority as pure SIPW'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout current SIPW main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: target
+          submodules: true
+          fetch-depth: 1
+
+      - name: Checkout exact upstream authority
+        uses: actions/checkout@v4
+        with:
+          repository: ethereum/eipw
+          ref: 74a1df8a732f99ff7d904768d80a78e93ca1bb0f
+          path: expected
+          submodules: false
+          fetch-depth: 1
+
+      - name: Build expected Pure Sila projection and compare
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, os, re, shutil, subprocess
+
+          root = Path('expected')
+          token_map = {
+              'Ethereum':'Sila','ethereum':'sila','ETHEREUM':'SILA',
+              'EIPs':'SIPs','eips':'sips','EIP':'SIP','eip':'sip',
+              'ERCs':'SRCs','ercs':'srcs','ERC':'SRC','erc':'src',
+              'ETH':'SIL','Eth':'Sil','eth':'sil','Ether':'Sila','ether':'sila',
+              'EIPW':'SIPW','Eipw':'Sipw','eipw':'sipw',
+          }
+          literals = [
+              ('https://eips.ethereum.org','https://sips.sila.org'),
+              ('eips.ethereum.org','sips.sila.org'),
+              ('https://github.com/ethereum/eipw','https://github.com/sila-chain/sipw'),
+              ('github.com/ethereum/eipw','github.com/sila-chain/sipw'),
+              ('https://github.com/ethereum/','https://github.com/sila-chain/'),
+              ('github.com/ethereum/','github.com/sila-chain/'),
+              ('https://ethereum.org','https://sila.org'),('ethereum.org','sila.org'),
+              ('Ethereum Foundation','Sila Foundation'),('Etherscan','SilaScan'),
+              ('WETH','WSIL'),('IWETH','IWSIL'),('IERC','ISRC'),('AERC','ASRC'),('IEIP','ISIP'),
+          ]
+          rx = re.compile(r'\b(?:'+'|'.join(sorted(map(re.escape, token_map), key=len, reverse=True))+r')\b')
+
+          def is_binary(p):
+              b=p.read_bytes()[:8192]
+              if b'\x00' in b: return True
+              try: b.decode('utf-8'); return False
+              except UnicodeDecodeError: return True
+
+          # Remove checkout metadata and leave submodule path as a gitlink placeholder.
+          shutil.rmtree(root/'.git', ignore_errors=True)
+          sub = root/'eipw-lint'/'dictionaries'
+          if sub.exists(): shutil.rmtree(sub, ignore_errors=True)
+
+          for p in list(root.rglob('*')):
+              if p.is_file() and not is_binary(p):
+                  s=p.read_text('utf-8')
+                  for a,b in literals: s=s.replace(a,b)
+                  s=rx.sub(lambda m: token_map[m.group(0)], s)
+                  p.write_text(s,'utf-8')
+
+          # Rename identity-bearing path components from deepest to shallowest.
+          paths=sorted([p for p in root.rglob('*')], key=lambda p:len(p.parts), reverse=True)
+          for p in paths:
+              if not p.exists(): continue
+              n=p.name.replace('eipw','sipw').replace('EIPW','SIPW').replace('Eipw','Sipw')
+              n=re.sub(r'\bEIPs\b','SIPs',n); n=re.sub(r'\bEIP\b','SIP',n); n=re.sub(r'\beip\b','sip',n)
+              if n != p.name:
+                  q=p.with_name(n)
+                  if q.exists(): raise SystemExit(f'PATH_COLLISION:{p}->{q}')
+                  p.rename(q)
+
+          target=Path('target')
+          # Ignore git metadata and materialized submodule contents for regular-file comparison.
+          def files(base):
+              out={}
+              for p in base.rglob('*'):
+                  if not p.is_file() or '.git' in p.parts: continue
+                  rel=p.relative_to(base).as_posix()
+                  if rel.startswith('sipw-lint/dictionaries/'): continue
+                  out[rel]=hashlib.sha256(p.read_bytes()).hexdigest()
+              return out
+          a=files(root); b=files(target)
+          missing=sorted(set(a)-set(b)); extra=sorted(set(b)-set(a)); changed=sorted(k for k in set(a)&set(b) if a[k]!=b[k])
+          print(f'EXPECTED_REGULAR_FILES={len(a)}')
+          print(f'TARGET_REGULAR_FILES={len(b)}')
+          print(f'MISSING_COUNT={len(missing)}')
+          print(f'EXTRA_COUNT={len(extra)}')
+          print(f'CHANGED_COUNT={len(changed)}')
+          for label,items in [('MISSING',missing),('EXTRA',extra),('CHANGED',changed)]:
+              for x in items[:100]: print(f'{label}:{x}')
+
+          # Verify the third-party dictionaries gitlink is preserved exactly.
+          up=subprocess.check_output(['git','-C','expected','ls-tree','74a1df8a732f99ff7d904768d80a78e93ca1bb0f','eipw-lint/dictionaries'],text=True).split()[2]
+          si=subprocess.check_output(['git','-C','target','ls-tree','HEAD','sipw-lint/dictionaries'],text=True).split()[2]
+          print('UPSTREAM_DICTIONARIES_GITLINK='+up)
+          print('SIPW_DICTIONARIES_GITLINK='+si)
+          print('GITLINK_MATCH='+str(up==si).upper())
+          if missing or extra or changed or up!=si: raise SystemExit(1)
+
+          # Strict actionable identity gate on SIPW main.
+          ids=['Ethereum','ethereum','ETHEREUM','EIPs','eips','EIP','eip','ERCs','ercs','ERC','erc','ETH','Eth','eth','Ether','ether','EIPW','Eipw','eipw']
+          irx=re.compile(r'\b(?:'+'|'.join(map(re.escape,ids))+r')\b')
+          residual=[]
+          for p in target.rglob('*'):
+              if '.git' in p.parts: continue
+              rel=p.relative_to(target).as_posix()
+              if irx.search(rel): residual.append('PATH:'+rel)
+              if p.is_file() and not is_binary(p):
+                  s=p.read_text('utf-8')
+                  # Third-party organizations whose names merely contain ethereum are not actionable.
+                  s=re.sub(r'https?://github\.com/ethereum[A-Za-z0-9_.-]+', '__THIRD_PARTY__', s)
+                  if irx.search(s): residual.append('TEXT:'+rel)
+          print('ACTIONABLE_IDENTITY_RESIDUAL_COUNT='+str(len(residual)))
+          for x in residual[:100]: print(x)
+          if residual: raise SystemExit(1)
+          PY
+
+      - name: Set up Rust 1.81
+        uses: dtolnay/rust-toolchain@1.81
+        with:
+          components: rustfmt, clippy
+
+      - name: Cargo check
+        working-directory: target
+        run: cargo check --all --all-features --locked
+
+      - name: Cargo fmt
+        working-directory: target
+        run: cargo fmt --all -- --check
+
+      - name: Cargo clippy
+        working-directory: target
+        run: cargo clippy --all-features -- --deny warnings
+
+      - name: Cargo tests no default features
+        working-directory: target
+        run: cargo test --all --no-default-features --locked
+
+      - name: Cargo tests all features
+        working-directory: target
+        run: cargo test --all --all-features --locked
